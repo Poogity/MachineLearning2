@@ -1,19 +1,11 @@
 import scipy.io
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
 
 inputSize = 10
 n_iters = 1000
 c= 10**(-5)
 N=49
-
-def mse(img1, img2):
-   h, w = img1.shape
-   diff = cv2.subtract(img1, img2)
-   err = np.sum(diff**2)
-   mse = err/(float(h*w))
-   return mse
 
 def ReLU(W1):
     Z1 = np.empty((128,1))
@@ -95,30 +87,39 @@ for k in range(4):
     P= np.zeros((10,1))
     
     costArray = np.empty(n_iters)
-    for i in range(n_iters):
-        Z,P,J=gradDescent(Z,P)
-        costArray[i] = J
-        if(J<minJ): bestZ=Z
+    #5 different initializations, choosing 
+    #the one with the smallest mean cost
+    for j in range(5): 
+        #initialize Z
+        Z = np.empty((inputSize,1))
+        for i in range(inputSize):
+            Z[i] = np.random.normal(0,1)
+    
+        P= np.zeros((10,1))
+        
+        tempCostArray = np.empty(n_iters)
+        for i in range(n_iters):
+            Z,P,J=gradDescent(Z,P)
+            tempCostArray[i] = J
+        if (np.mean(tempCostArray[-20:])-minJ<0): 
+            minJ = float(np.mean(tempCostArray[-20:]))
+            bestZ=Z
+            costArray = tempCostArray
         
     R,_,_ = forwProp(bestZ)
     R = np.reshape(R, (28,28), order='F')
     cAA[k] = costArray
-    Xtest = np.dot(T,XI[:,k])
-    #Xtest = np.reshape(Xtest, (49,1))
-    Xtest = np.reshape(Xtest,(7,7),order='F')
-    Xtest =np.kron(Xtest,np.ones((4,4)))
     Xn=np.reshape(Xn,(7,7),order='F')
     Xn=np.kron(Xn,np.ones((4,4)))
     Xi=np.reshape(XI[:,k],(28,28),order='F')
-    #print(mse(Xn,Xtest))
+
     plt.subplot(4,3,3*k+1),plt.imshow(Xi, cmap = 'gray')
     plt.title('Original'), plt.xticks([]), plt.yticks([])
     plt.subplot(4,3,3*k+2),plt.imshow(Xn, cmap = 'gray')
     plt.title('Noisy'), plt.xticks([]), plt.yticks([])
     plt.subplot(4,3,3*k+3),plt.imshow(R, cmap = 'gray')
-    plt.title('Restored '), plt.xticks([]), plt.yticks([])
+    plt.title('Restored'), plt.xticks([]), plt.yticks([])
 plt.show()
-
 
 xaxis = np.linspace(1, n_iters,n_iters)
 for i in range(4):  

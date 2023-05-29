@@ -5,6 +5,7 @@ import numpy as np
 inputSize = 10
 N = 400
 n_iters = 1000
+c= 10**(-5)
 def ReLU(W1):
     Z1 = np.empty((128,1))
     for i in range(128):      
@@ -22,7 +23,7 @@ def forwProp(Z):
     return X,W1,W2
 
 def gradDescent(Z,P):
-    lamda = 0.0001
+    lamda = 0.01
     if P.all() ==0: lamda=1
     lr = 5
     X,W1,W2 = forwProp(Z)
@@ -30,20 +31,19 @@ def gradDescent(Z,P):
     U2 = np.dot(2*T.T/np.linalg.norm((TX-Xn+c)**2),TX-Xn)
     dSigmoid = -(np.exp(W2))/((1+np.exp(W2)))**2
     V2= (U2*dSigmoid)
-
     U1 = np.dot(A2.T,V2)
     V1 = U1 *(W1 > 0)*1 
     U0 = np.dot(A1.T,V1)
     gradJ = N*U0+2*Z
-    J = (N*np.log(np.linalg.norm(TX-Xn+c)**2)+np.linalg.norm((Z)**2))
+    J = (N*np.log(np.linalg.norm(TX-Xn+c)**2)+np.linalg.norm((Z))**2)
     #print(f'cost value = {J:.4f}')
     P = (1-lamda)*P + lamda*(gradJ**2)
     
-    Z = Z - lr*gradJ/(c+P)
+    Z = Z - lr*gradJ/((c+P))
     return Z,P,J
 
 
-c= 10**(-5)
+
 
 
 #Loading Data
@@ -71,19 +71,26 @@ for k in range(4):
     minJ = float("inf")
     Xn = np.dot(T,XN[:,k])
     Xn=np.reshape(Xn,(N,1))
-    
-    #initialize Z
-    Z = np.empty((inputSize,1))
-    for i in range(inputSize):
-        Z[i] = np.random.normal(0,1)
-    
-    P= np.zeros((10,1))
-    
     costArray = np.empty(n_iters)
-    for i in range(n_iters):
-        Z,P,J=gradDescent(Z,P)
-        costArray[i] = J
-        if(J<minJ): bestZ=Z
+    #5 different initializations, choosing 
+    #the one with the smallest mean cost
+    for j in range(5): 
+        #initialize Z
+        Z = np.empty((inputSize,1))
+        for i in range(inputSize):
+            Z[i] = np.random.normal(0,1)
+    
+        P= np.zeros((10,1))
+        
+        tempCostArray = np.empty(n_iters)
+        for i in range(n_iters):
+            Z,P,J=gradDescent(Z,P)
+            tempCostArray[i] = J
+        if (np.mean(tempCostArray[-20:])-minJ<0): 
+            minJ = float(np.mean(tempCostArray[-20:]))
+            bestZ=Z
+            costArray = tempCostArray
+        
     R,_,_ = forwProp(bestZ)
     R = np.reshape(R, (28,28), order='F')
     cAA[k] = costArray
@@ -102,9 +109,3 @@ plt.show()
 xaxis = np.linspace(1, n_iters,n_iters)
 for i in range(4):  
     plt.plot(xaxis,cAA[i])   
-
-
-
-
-#plt.imshow(TX,cmap='gray')
-#plt.xticks([]), plt.yticks([])
